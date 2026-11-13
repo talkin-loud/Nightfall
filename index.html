@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#030303">
+  <meta name="color-scheme" content="dark">
+  <title>Nightfall — Light Pollution Fingerprints</title>
+  <meta name="description" content="Daily geography puzzle: identify world regions from NASA VIIRS nighttime light pollution fingerprints. Wrong guesses zoom out 2x.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="puzzles.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-row">
+          <span class="brand-beacon" aria-hidden="true"></span>
+          <h1 class="brand-title">Nightfall</h1>
+          <span id="puzzle-badge" class="puzzle-badge">#001 · DAILY</span>
+        </div>
+        <p class="brand-subtitle">Light Pollution Fingerprints</p>
+      </div>
+
+      <nav class="top-actions" aria-label="Game controls">
+        <button
+          type="button"
+          class="icon-btn"
+          commandfor="archive-dialog"
+          command="show-modal"
+          aria-label="Puzzle archive and practice mode"
+          title="Puzzle Archive"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M3 12h18"></path>
+            <path d="M12 3a14 14 0 0 1 0 18"></path>
+            <path d="M12 3a14 14 0 0 0 0 18"></path>
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          class="icon-btn"
+          commandfor="stats-dialog"
+          command="show-modal"
+          aria-label="Player statistics"
+          title="Statistics"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 20V10"></path>
+            <path d="M10 20V4"></path>
+            <path d="M16 20v-7"></path>
+            <path d="M22 20v-4"></path>
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          class="icon-btn"
+          commandfor="help-dialog"
+          command="show-modal"
+          aria-label="How to play Nightfall"
+          title="How to Play"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M9.5 9a2.5 2.5 0 0 1 4.8.8c0 1.7-2.3 2.2-2.3 3.7"></path>
+            <circle cx="12" cy="17.2" r="0.6" fill="currentColor"></circle>
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="game-main">
+      <!-- Satellite Viewport -->
+      <section class="viewport-section" aria-label="Satellite night-light viewport">
+        <div class="hud-strip">
+          <div class="hud-left">
+            <span id="zoom-readout" class="hud-chip hud-chip--yellow">1× CROP</span>
+            <span id="span-readout" class="hud-meta">~180 KM SPAN</span>
+          </div>
+          <div class="hud-right">
+            <span id="spectrum-pill" class="spectrum-pill">
+              <span class="spectrum-dot" aria-hidden="true"></span>
+              <span id="spectrum-label">YELLOW SPECTRUM</span>
+            </span>
+          </div>
+        </div>
+
+        <div id="viewport-square" class="viewport-square">
+          <canvas
+            id="nightfall-canvas"
+            width="512"
+            height="512"
+            aria-label="Nighttime satellite light pollution fingerprint showing yellow and white human settlement clusters against pitch-black darkness"
+          ></canvas>
+
+          <!-- Minimal vintage optical crosshairs -->
+          <div class="reticle-corner reticle-tl" aria-hidden="true"></div>
+          <div class="reticle-corner reticle-tr" aria-hidden="true"></div>
+          <div class="reticle-corner reticle-bl" aria-hidden="true"></div>
+          <div class="reticle-corner reticle-br" aria-hidden="true"></div>
+
+          <div class="viewport-overlay-bottom" aria-hidden="true">
+            <div class="scale-bar-wrap">
+              <span class="scale-bar-line"></span>
+              <span id="scale-bar-label" class="scale-bar-label">50 KM</span>
+            </div>
+            <span id="sat-source-tag" class="sat-source-tag">VIIRS · DNB</span>
+            <span class="compass-tick">N ↑</span>
+          </div>
+        </div>
+
+        <!-- 2x Zoom Step Controls -->
+        <div class="zoom-steps" role="group" aria-label="Unlocked zoom levels">
+          <button type="button" class="zoom-step is-unlocked is-active" data-step="0">1×</button>
+          <button type="button" class="zoom-step" data-step="1" disabled>2×</button>
+          <button type="button" class="zoom-step" data-step="2" disabled>4×</button>
+          <button type="button" class="zoom-step" data-step="3" disabled>8×</button>
+          <button type="button" class="zoom-step" data-step="4" disabled>16×</button>
+          <button type="button" class="zoom-step" data-step="5" disabled>32×</button>
+        </div>
+      </section>
+
+      <!-- Guess Input Section -->
+      <section id="guess-section" class="guess-section" aria-label="Submit a location guess">
+        <form id="guess-form" class="guess-form" novalidate>
+          <div class="guess-label-row">
+            <label for="guess-input" class="guess-label">
+              <span id="attempt-label">GUESS 1 OF 6</span>
+              <span class="label-sep">·</span>
+              <span>IDENTIFY REGION</span>
+            </label>
+            <button type="button" id="skip-zoom-btn" class="text-action-btn">Zoom Out 2× →</button>
+          </div>
+
+          <div class="combobox-row">
+            <div class="combobox-wrap">
+              <input
+                type="text"
+                id="guess-input"
+                name="guess"
+                class="guess-input"
+                placeholder="City, region, or country…"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="go"
+                required
+                aria-describedby="guess-error"
+                aria-autocomplete="list"
+                aria-controls="suggestions-list"
+                aria-expanded="false"
+              >
+              <ul
+                id="suggestions-list"
+                class="suggestions-list"
+                role="listbox"
+                aria-label="Matching world locations"
+                hidden
+              ></ul>
+            </div>
+            <button type="submit" id="submit-guess-btn" class="submit-btn">Guess</button>
+          </div>
+
+          <p id="guess-error" class="form-error" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <!-- Post-Game Reveal Card -->
+      <section id="reveal-card" class="reveal-card" aria-live="polite" hidden>
+        <div class="reveal-header">
+          <span id="reveal-status-badge" class="reveal-badge">FINGERPRINT MATCHED</span>
+          <span id="reveal-coords" class="reveal-coords">30.45° N, 31.15° E</span>
+        </div>
+        <h2 id="reveal-title" class="reveal-title">Nile River &amp; Delta</h2>
+        <p id="reveal-meta" class="reveal-meta">Egypt · North Africa · River Valley &amp; Delta</p>
+        <p id="reveal-explanation" class="reveal-explanation"></p>
+
+        <div class="reveal-actions">
+          <button type="button" id="share-btn" class="btn-primary">Share Result</button>
+          <button type="button" id="toggle-context-btn" class="btn-secondary" aria-pressed="false">Map Borders: Off</button>
+          <button type="button" id="next-puzzle-btn" class="btn-secondary">Random Region</button>
+        </div>
+      </section>
+
+      <!-- Telemetry Guess Log -->
+      <section class="guesses-section" aria-label="Guess telemetry log">
+        <ol id="guesses-list" class="guesses-list"></ol>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <!-- How to Play Dialog -->
+  <dialog id="help-dialog" class="night-dialog" closedby="any" aria-labelledby="help-title">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h2 id="help-title" class="dialog-title">Field Guide</h2>
+        <button type="button" class="dialog-close" commandfor="help-dialog" command="close" aria-label="Close field guide">✕</button>
+      </div>
+      <div class="dialog-body">
+        <p class="dialog-lead">Identify Earth’s hidden settlements from pure light pollution—no borders, coastlines, or labels.</p>
+        <ul class="guide-list">
+          <li><strong>1. Read the pattern:</strong> Look for river ribbons, curving coasts, railway strings, mountain-rimmed basins, or offshore oil flares glowing in vintage yellow.</li>
+          <li><strong>2. Guess any place:</strong> Enter a city, region, or country. Every wrong guess gives distance, compass bearing, and <strong>zooms out 2×</strong> (up to 32× continental scale).</li>
+          <li><strong>3. Inspect freely:</strong> Tap any unlocked zoom pill (<code>1×</code> to <code>32×</code>) at any time to compare tight street geometry against wider neighboring clusters.</li>
+          <li><strong>4. Win within 6 guesses:</strong> Match the target region or land within its metropolitan radius.</li>
+        </ul>
+        <p class="dialog-footnote">Nighttime light imagery sourced from NASA GIBS VIIRS Earth at Night (Black Marble).</p>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Statistics Dialog -->
+  <dialog id="stats-dialog" class="night-dialog" closedby="any" aria-labelledby="stats-title">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h2 id="stats-title" class="dialog-title">Telemetry Stats</h2>
+        <button type="button" class="dialog-close" commandfor="stats-dialog" command="close" aria-label="Close statistics">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <span id="stat-played" class="stat-num">0</span>
+            <span class="stat-label">Played</span>
+          </div>
+          <div class="stat-cell">
+            <span id="stat-win-pct" class="stat-num">0%</span>
+            <span class="stat-label">Win Rate</span>
+          </div>
+          <div class="stat-cell">
+            <span id="stat-streak" class="stat-num">0</span>
+            <span class="stat-label">Streak</span>
+          </div>
+          <div class="stat-cell">
+            <span id="stat-best-streak" class="stat-num">0</span>
+            <span class="stat-label">Max Streak</span>
+          </div>
+        </div>
+        <h3 class="dialog-subhead">Zoom Distribution</h3>
+        <div id="dist-bars" class="dist-bars"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Puzzle Archive / Practice Mode Dialog -->
+  <dialog id="archive-dialog" class="night-dialog" closedby="any" aria-labelledby="archive-title">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <h2 id="archive-title" class="dialog-title">Light Fingerprints</h2>
+        <button type="button" class="dialog-close" commandfor="archive-dialog" command="close" aria-label="Close puzzle archive">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="archive-toolbar">
+          <button type="button" id="play-daily-btn" class="btn-primary btn-sm">Today’s Daily</button>
+          <button type="button" id="play-random-btn" class="btn-secondary btn-sm">Random Unsolved</button>
+        </div>
+        <ul id="archive-list" class="archive-list"></ul>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>
