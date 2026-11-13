@@ -389,37 +389,62 @@
       Math.cos(toRad(currentPuzzle.lat)) /
       CANVAS_SIZE;
 
-    const drawGlowSpot = (px, py, radiusPx, intensity) => {
+    const drawGlowSpot = (px, py, radiusPx, intensity, seed = 7) => {
       if (px < -radiusPx * 2 || px > CANVAS_SIZE + radiusPx * 2 || py < -radiusPx * 2 || py > CANVAS_SIZE + radiusPx * 2) {
         return;
       }
-      const r = Math.max(1.2, radiusPx);
-      const grad = targetCtx.createRadialGradient(px, py, 0, px, py, r);
-      const alpha = Math.min(1, intensity * (boostYellow ? 1.16 : 1));
-      if (yellowMode) {
-        grad.addColorStop(0, `rgba(255, 248, 212, ${alpha})`);
-        grad.addColorStop(0.28, `rgba(255, 224, 110, ${alpha * 0.88})`);
-        grad.addColorStop(0.65, `rgba(235, 168, 28, ${alpha * 0.36})`);
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      } else {
-        grad.addColorStop(0, `rgba(255, 252, 240, ${alpha})`);
-        grad.addColorStop(0.35, `rgba(255, 228, 138, ${alpha * 0.72})`);
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      const r = Math.max(1.5, radiusPx);
+      const scale = Math.min(1.2, intensity * (boostYellow ? 1.15 : 1));
+      const snap = (v) => Math.round(v / 2) * 2;
+      const cx = snap(px);
+      const cy = snap(py);
+
+      const outerColor = yellowMode
+        ? boostYellow
+          ? 'rgba(224, 154, 24, 0.72)'
+          : 'rgba(196, 130, 18, 0.65)'
+        : 'rgba(180, 165, 130, 0.6)';
+      const midColor = yellowMode
+        ? boostYellow
+          ? 'rgba(255, 212, 68, 0.92)'
+          : 'rgba(245, 197, 66, 0.88)'
+        : 'rgba(244, 235, 205, 0.85)';
+      const coreColor = yellowMode ? '#ffe885' : '#fff9e6';
+
+      // Outer flat satellite pixel scatter
+      const pixelCount = Math.min(28, Math.max(3, Math.round(r * 1.1)));
+      const localRng = mulberry32(seed);
+      targetCtx.fillStyle = outerColor;
+      for (let i = 0; i < pixelCount; i++) {
+        const ang = localRng() * Math.PI * 2;
+        const dist = (0.25 + localRng() * 0.75) * r;
+        const ox = snap(cx + Math.cos(ang) * dist);
+        const oy = snap(cy + Math.sin(ang) * dist);
+        const sz = localRng() > 0.6 ? 3 : 2;
+        targetCtx.fillRect(ox, oy, sz, sz);
       }
-      targetCtx.fillStyle = grad;
-      targetCtx.beginPath();
-      targetCtx.arc(px, py, r, 0, Math.PI * 2);
-      targetCtx.fill();
+
+      // Mid flat city-grid block
+      const midSize = Math.max(2, snap(r * 0.55 * scale));
+      targetCtx.fillStyle = midColor;
+      targetCtx.fillRect(cx - Math.floor(midSize / 2), cy - Math.floor(midSize / 2), midSize, midSize);
+
+      // Dense core flat pixel
+      if (scale >= 0.45) {
+        const coreSize = Math.max(2, snap(r * 0.25 * scale));
+        targetCtx.fillStyle = coreColor;
+        targetCtx.fillRect(cx - Math.floor(coreSize / 2), cy - Math.floor(coreSize / 2), coreSize, coreSize);
+      }
     };
 
     targetCtx.save();
-    targetCtx.globalCompositeOperation = 'lighter';
 
     const rng = mulberry32(currentPuzzle.id * 9187 + 1337);
     const { hubs = [], filaments = [] } = currentPuzzle.morphology || {};
 
     // 1. Filaments (rivers, coastlines, rail strings, highways) with beaded micro-settlements
-    for (const line of filaments) {
+    for (let li = 0; li < filaments.length; li++) {
+      const line = filaments[li];
       for (let i = 0; i < line.length - 1; i++) {
         const [latA, lonA] = line[i];
         const [latB, lonB] = line[i + 1];
@@ -430,17 +455,17 @@
           const lon = lonA + (lonB - lonA) * u + (rng() - 0.5) * 0.05;
           const [px, py] = project(lat, lon);
           const beadR = (3.8 + rng() * 5.5) / Math.max(0.35, kmPerPx);
-          drawGlowSpot(px, py, Math.min(18, Math.max(1.3, beadR)), 0.18 + rng() * 0.24);
+          drawGlowSpot(px, py, Math.min(18, Math.max(1.5, beadR)), 0.35 + rng() * 0.25, li * 997 + i * 73 + s);
         }
       }
     }
 
     // 2. Primary puzzle urban hubs + satellite towns scatter
-    for (const [hLat, hLon, strength, radiusKm] of hubs) {
+    for (let hi = 0; hi < hubs.length; hi++) {
+      const [hLat, hLon, strength, radiusKm] = hubs[hi];
       const [hx, hy] = project(hLat, hLon);
       const radiusPx = Math.min(84, Math.max(2.2, radiusKm / kmPerPx));
-      drawGlowSpot(hx, hy, radiusPx, strength * 0.92);
-      drawGlowSpot(hx, hy, radiusPx * 0.38, Math.min(1, strength * 1.1));
+      drawGlowSpot(hx, hy, radiusPx, strength * 0.95, hi * 313 + 17);
 
       // Satellite suburb speckles around each hub
       const subCount = Math.round(10 * strength);
@@ -450,25 +475,26 @@
         const sLat = hLat + Math.sin(ang) * distDeg * 0.8;
         const sLon = hLon + Math.cos(ang) * distDeg;
         const [sx, sy] = project(sLat, sLon);
-        drawGlowSpot(sx, sy, Math.max(1.2, radiusPx * (0.14 + rng() * 0.2)), strength * (0.28 + rng() * 0.35));
+        drawGlowSpot(sx, sy, Math.max(1.5, radiusPx * (0.14 + rng() * 0.2)), strength * (0.35 + rng() * 0.35), hi * 911 + k);
       }
     }
 
     // 3. Neighboring global cities from gazetteer so 4x..32x zoom-outs show real neighboring clusters
-    for (const loc of LOCATIONS) {
+    for (let li = 0; li < LOCATIONS.length; li++) {
+      const loc = LOCATIONS[li];
       if (loc.puzzleId === currentPuzzle.id) continue;
       const dist = haversineKm(currentPuzzle.lat, currentPuzzle.lon, loc.lat, loc.lon);
       if (dist < 45) continue;
       const [lx, ly] = project(loc.lat, loc.lon);
       if (lx < -30 || lx > CANVAS_SIZE + 30 || ly < -30 || ly > CANVAS_SIZE + 30) continue;
-      const cityR = Math.min(26, Math.max(1.6, 13 / kmPerPx));
-      drawGlowSpot(lx, ly, cityR, 0.55);
+      const cityR = Math.min(26, Math.max(1.8, 13 / kmPerPx));
+      drawGlowSpot(lx, ly, cityR, 0.6, li * 521 + 9);
       // Tiny nearby constellation
       const localRng = mulberry32(Math.abs(Math.round(loc.lat * 1000 + loc.lon * 777)));
       for (let j = 0; j < 4; j++) {
         const dx = (localRng() - 0.5) * cityR * 1.9;
         const dy = (localRng() - 0.5) * cityR * 1.9;
-        drawGlowSpot(lx + dx, ly + dy, Math.max(1.1, cityR * 0.35), 0.25);
+        drawGlowSpot(lx + dx, ly + dy, Math.max(1.5, cityR * 0.35), 0.35, li * 101 + j);
       }
     }
 
