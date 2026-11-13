@@ -9,7 +9,8 @@
   <meta name="description" content="Daily geography puzzle: identify world regions from NASA VIIRS nighttime light pollution fingerprints. Wrong guesses zoom out 2x.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Alien+Block&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="puzzles.js" defer></script>
   <script src="app.js" defer></script>
@@ -19,7 +20,7 @@
     <header class="top-bar">
       <div class="brand">
         <div class="brand-row">
-          <svg class="brand-emblem" width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <svg class="brand-emblem" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <rect x="2" y="2" width="4" height="4" fill="#f5c542"></rect>
             <rect x="14" y="2" width="4" height="4" fill="#f5c542"></rect>
             <rect x="6" y="6" width="8" height="4" fill="#f5c542"></rect>
@@ -30,9 +31,11 @@
             <rect x="12" y="14" width="4" height="4" fill="#f5c542"></rect>
           </svg>
           <h1 class="brand-title">NIGHTFALL</h1>
-          <span id="puzzle-badge" class="puzzle-badge">#001 · DAILY</span>
         </div>
-        <p class="brand-subtitle">Light Pollution Fingerprints</p>
+        <div class="brand-subrow">
+          <span id="puzzle-badge" class="puzzle-badge">#001 · DAILY</span>
+          <p class="brand-subtitle">Light Pollution Fingerprints</p>
+        </div>
       </div>
 
       <nav class="top-actions" aria-label="Game controls">
@@ -108,15 +111,15 @@
             height="512"
             aria-label="Nighttime satellite light pollution fingerprint showing yellow and white human settlement clusters against pitch-black darkness"
           ></canvas>
+        </div>
 
-          <div class="viewport-overlay-bottom" aria-hidden="true">
-            <div class="scale-bar-wrap">
-              <span class="scale-bar-line"></span>
-              <span id="scale-bar-label" class="scale-bar-label">50 KM</span>
-            </div>
-            <span id="sat-source-tag" class="sat-source-tag">VIIRS · DNB</span>
-            <span class="compass-tick">N ↑</span>
+        <div class="viewport-overlay-bottom" aria-hidden="true">
+          <div class="scale-bar-wrap">
+            <span class="scale-bar-line"></span>
+            <span id="scale-bar-label" class="scale-bar-label">50 KM</span>
           </div>
+          <span id="sat-source-tag" class="sat-source-tag">VIIRS · DNB</span>
+          <span class="compass-tick">N ↑</span>
         </div>
 
         <!-- 2x Zoom Step Controls -->
@@ -136,8 +139,6 @@
           <div class="guess-label-row">
             <label for="guess-input" class="guess-label">
               <span id="attempt-label">GUESS 1 OF 6</span>
-              <span class="label-sep">·</span>
-              <span>IDENTIFY REGION</span>
             </label>
             <button type="button" id="skip-zoom-btn" class="text-action-btn">Zoom Out 2× →</button>
           </div>
